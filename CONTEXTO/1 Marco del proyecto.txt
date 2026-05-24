@@ -75,8 +75,3 @@ Trazabilidad de pruebas:
 Bitácora por fecha con configuración de perfil y resultado.
 Control de versiones:
 Commits descriptivos del código para demostrar evolución técnica.
-Si quieres, en el siguiente paso te redacto directamente un borrador de reporte completo en formato académico (introducción, metodología, experimentación, fallos, aciertos, conclusiones y trabajo futuro) usando este contexto.
-
-GPT-5.3-Codex • 0.9x
-
-
