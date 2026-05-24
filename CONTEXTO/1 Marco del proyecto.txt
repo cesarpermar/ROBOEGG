@@ -1,0 +1,82 @@
+1) Marco del proyecto
+
+Objetivo general del curso: construir un brazo robótico sin kit comercial y trazar figuras geométricas y una letra mayúscula. Evidencia: README.md:1, README.md:5, README.md:12.
+Entregables exigidos por docente: metodología, parámetros D-H, planeación de trayectorias, gráficas, pruebas, resultados y conclusiones. Evidencia: README.md:21.
+2) Estado técnico actual (lo que ya existe)
+
+Guía de electrónica y BOM con enfoque en NEMA17 + CNC Shield + A4988 + servo Z + finales de carrera:
+INSTRUCCIONES_ELECTRONICA.txt:1, INSTRUCCIONES_ELECTRONICA.txt:36, INSTRUCCIONES_ELECTRONICA.txt:68.
+Código principal de dibujo con cinemática inversa, validación de zona segura, perfil de calibración persistente y timeout serial:
+main_robot.py:14, main_robot.py:124, main_robot.py:167, main_robot.py:216.
+Script dedicado de calibración interactiva (jog, ajuste de escala/rotación/suavidad/servo, paro seguro, guardado de perfil):
+calibracion_robot.py:289, calibracion_robot.py:333, calibracion_robot.py:374, calibracion_robot.py:387, calibracion_robot.py:505.
+Prueba aislada del eje Z (servo) con barrido, ajuste de PWM y modo empuje para vencer rozamiento:
+prueba_servo_z.ino:13, prueba_servo_z.ino:20, prueba_servo_z.ino:60, prueba_servo_z.ino:202.
+3) Evidencia de experimentación realizada
+
+Corrección de modelo geométrico del brazo:
+Uso de L2 efectivo y compensación angular gamma, indicando que hubo desfase geométrico detectado y corregido.
+Evidencia: main_robot.py:14, main_robot.py:15, calibracion_robot.py:17, calibracion_robot.py:18.
+Calibración de alineación al papel (offset de workspace ya no está en cero):
+Perfil guardado actual con offset_x = 52.0 y offset_y ≈ 63.49.
+Evidencia: calibracion_perfil.json:3, calibracion_perfil.json:4.
+Ensayo de calidad de trazo:
+Flujo explícito para dibujar cuadrado/círculo de prueba y luego ajustar escala/rotación.
+Evidencia: calibracion_robot.py:487, calibracion_robot.py:490, calibracion_robot.py:374, calibracion_robot.py:387.
+Ensayo del eje Z enfocado en comportamiento real del servo:
+Ajuste de rango PWM, velocidad de paso y sobreimpulso.
+Evidencia: prueba_servo_z.ino:14, prueba_servo_z.ino:18, prueba_servo_z.ino:41, prueba_servo_z.ino:219.
+4) Fallos y errores identificados (documentables en tu reporte)
+
+Riesgo de fuera de alcance/colisión con zona base:
+Se bloquea punto inseguro y se emite alerta con sugerencia de calibración.
+Evidencia: main_robot.py:172, main_robot.py:175, calibracion_robot.py:210, calibracion_robot.py:357.
+Fallo de comunicación serial:
+Timeout cuando Arduino no responde OK.
+Evidencia: main_robot.py:216, calibracion_robot.py:189, calibracion_robot.py:322.
+Fallos operativos de arranque/conexión:
+Manejo explícito cuando COM3 no abre.
+Evidencia: main_robot.py:244, calibracion_robot.py:460.
+Fallos potenciales del servo por límites inválidos:
+Validación de rango min/max y de PWM min<max.
+Evidencia: prueba_servo_z.ino:177, prueba_servo_z.ino:190, prueba_servo_z.ino:213.
+5) Aciertos principales
+
+Diseño robusto por capas:
+Separación entre calibración, ejecución principal y prueba específica del servo.
+Evidencia: main_robot.py, calibracion_robot.py, prueba_servo_z.ino.
+Seguridad operativa implementada:
+Zona segura radial + retorno a home + paro seguro.
+Evidencia: main_robot.py:124, main_robot.py:142, calibracion_robot.py:93, calibracion_robot.py:195.
+Calibración persistente:
+Perfil JSON editable y cargado automáticamente.
+Evidencia: main_robot.py:22, main_robot.py:25, calibracion_robot.py:66.
+Sincronización por confirmación OK:
+Cada movimiento espera acuse del firmware, evitando desfase entre planificación y ejecución.
+Evidencia: main_robot.py:212, calibracion_robot.py:187.
+6) Conclusiones técnicas hasta ahora
+
+El proyecto está en fase funcional intermedia-avanzada: ya hay arquitectura de control, calibración y seguridad bien planteada.
+La corrección L2 efectivo + gamma y los offsets no nulos confirman que sí hubo iteraciones reales de experimentación y depuración.
+El mayor riesgo actual no parece ser el algoritmo base, sino la repetibilidad físico-mecánica y la trazabilidad de resultados (mediciones/evidencia formal).
+El repositorio aún no refleja completamente la evolución del código en Git:
+Historial con commits recientes solo de README e instrucciones.
+Evidencia de código aún sin versionar.
+Evidencia: README.md, INSTRUCCIONES_ELECTRONICA.txt, main_robot.py, calibracion_robot.py.
+7) Qué te falta para un reporte realmente completo (brecha actual)
+
+Evidencia cuantitativa de precisión:
+Error dimensional por figura en X/Y, error angular, repetibilidad en múltiples corridas.
+Evidencia visual:
+Fotos/video de montaje, trazos sobre papel por figura y comparativa esperado vs real.
+Parámetros D-H explícitos en documento:
+Están implícitos en código, pero faltan presentados formalmente como tabla.
+Trazabilidad de pruebas:
+Bitácora por fecha con configuración de perfil y resultado.
+Control de versiones:
+Commits descriptivos del código para demostrar evolución técnica.
+Si quieres, en el siguiente paso te redacto directamente un borrador de reporte completo en formato académico (introducción, metodología, experimentación, fallos, aciertos, conclusiones y trabajo futuro) usando este contexto.
+
+GPT-5.3-Codex • 0.9x
+
+

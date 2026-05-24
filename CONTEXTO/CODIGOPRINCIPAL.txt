@@ -1,0 +1,254 @@
+import numpy as np
+import serial
+import time
+import sys
+import json
+import os
+
+# ==============================================================================
+# CONFIGURACIÓN GENERAL
+# ==============================================================================
+# VALORES CORRECTOS — reemplaza en ambos archivos
+L2          = 150.0
+L2_EFECTIVO = 159.94   # sqrt(150² + 55.5²)
+GAMMA       = 20.30    # atan2(55.5, 150) en grados
+RADIO_BASE_SEGURO = 60.0 
+PUERTO_ARDUINO = 'COM3'
+BAUDRATE = 115200
+TIMEOUT_MOVIMIENTO = 15.0 
+DISENO_CENTRO_X = 200.0
+DISENO_CENTRO_Y = 0.0
+PERFIL_CALIBRACION = os.path.join(os.path.dirname(__file__), 'calibracion_perfil.json')
+
+
+def cargar_perfil_calibracion():
+    perfil_base = {
+        "workspace": {
+            "offset_x": 0.0,
+            "offset_y": 0.0,
+            "escala_x": 1.0,
+            "escala_y": 1.0,
+            "rotacion_grados": 0.0
+        },
+        "angulos": {
+            "q1_gain": 1.0,
+            "q2_gain": 1.0,
+            "q1_offset": 0.0,
+            "q2_offset": 0.0
+        },
+        "movimiento": {
+            "pasos_dibujo": 20,
+            "pasos_traslado": 2,
+            "timeout_movimiento": TIMEOUT_MOVIMIENTO
+        }
+    }
+
+    if not os.path.exists(PERFIL_CALIBRACION):
+        return perfil_base
+
+    try:
+        with open(PERFIL_CALIBRACION, 'r', encoding='utf-8') as f:
+            perfil_usuario = json.load(f)
+
+        for bloque in perfil_base:
+            if bloque in perfil_usuario and isinstance(perfil_usuario[bloque], dict):
+                perfil_base[bloque].update(perfil_usuario[bloque])
+
+    except Exception as e:
+        print(f"[WARN] No se pudo leer el perfil de calibracion: {e}")
+
+    return perfil_base
+
+
+PERFIL = cargar_perfil_calibracion()
+
+
+def aplicar_calibracion_xy(x, y):
+    ws = PERFIL["workspace"]
+    dx = x - DISENO_CENTRO_X
+    dy = y - DISENO_CENTRO_Y
+
+    dx *= ws["escala_x"]
+    dy *= ws["escala_y"]
+
+    ang = np.radians(ws["rotacion_grados"])
+    dx_rot = dx * np.cos(ang) - dy * np.sin(ang)
+    dy_rot = dx * np.sin(ang) + dy * np.cos(ang)
+
+    x_cal = DISENO_CENTRO_X + dx_rot + ws["offset_x"]
+    y_cal = DISENO_CENTRO_Y + dy_rot + ws["offset_y"]
+    return x_cal, y_cal
+
+
+def aplicar_calibracion_angulos(q1, q2):
+    ang = PERFIL["angulos"]
+    q1_cal = q1 * ang["q1_gain"] + ang["q1_offset"]
+    q2_cal = q2 * ang["q2_gain"] + ang["q2_offset"]
+    return q1_cal, q2_cal
+
+# ==============================================================================
+# DICCIONARIO DE FIGURAS (Totalmente modular)
+# ==============================================================================
+def obtener_vertices(tipo):
+    # Todas las figuras están centradas aproximadamente en X=200, Y=0
+    # para garantizar que estén en la zona segura del espacio de trabajo.
+    if tipo == 'Triangulo':
+        return [(160, -30), (240, 0), (160, 30), (160, -30)]
+    
+    elif tipo == 'Cuadrado':
+        return [(160, -40), (240, -40), (240, 40), (160, 40), (160, -40)]
+    
+    elif tipo == 'Pentagono':
+        angulos = np.linspace(0, 2 * np.pi, 6) # 5 lados + volver al inicio
+        return [(200 + 40 * np.cos(a), 40 * np.sin(a)) for a in angulos]
+    
+    elif tipo == 'Circulo':
+        angulos = np.linspace(0, 2 * np.pi, 30) # 30 puntos de resolución
+        return [(200 + 40 * np.cos(a), 40 * np.sin(a)) for a in angulos]
+    
+    return []
+
+# ==============================================================================
+# MÓDULOS DE CINEMÁTICA Y SEGURIDAD
+# ==============================================================================
+def punto_es_seguro(px, py):
+    distancia = np.sqrt(px**2 + py**2)
+    alcance_maximo = L1 + L2_EFECTIVO - 5 
+    if distancia > alcance_maximo or distancia < RADIO_BASE_SEGURO:
+        return False
+    return True
+
+def calcular_ik(px, py):
+    h_cuad = px**2 + py**2
+    cos_q2 = np.clip((h_cuad - L1**2 - L2_EFECTIVO**2) / (2 * L1 * L2_EFECTIVO), -1.0, 1.0)
+    q2_efectivo = np.degrees(np.arccos(cos_q2))
+    beta = np.arctan2(py, px)
+    alfa = np.arctan2(L2_EFECTIVO * np.sin(np.radians(q2_efectivo)), L1 + L2_EFECTIVO * np.cos(np.radians(q2_efectivo)))
+    q1 = np.degrees(beta - alfa)
+    q2_motor = q2_efectivo - GAMMA
+    return q1, q2_motor
+
+def regresar_a_casa(arduino):
+    print("\n[!] Retornando a posición segura por memoria...")
+    comando_home = "0.00,0.00,0\n"
+    arduino.write(comando_home.encode('utf-8'))
+    time.sleep(3) 
+    print("El robot se ha retraído.")
+
+# ==============================================================================
+# MÓDULO PRINCIPAL DE TRAZO
+# ==============================================================================
+def trazar_figura(nombre_figura, arduino):
+    vertices = obtener_vertices(nombre_figura)
+    if not vertices:
+        print("Figura no encontrada.")
+        return
+
+    puntos_totales = []
+    pasos_dibujo = max(3, int(PERFIL["movimiento"]["pasos_dibujo"]))
+    pasos_traslado = max(2, int(PERFIL["movimiento"]["pasos_traslado"]))
+
+    # Sub-función para interpolar los puntos
+    def planificar_trayectoria(p_ini, p_fin, z_baja, pasos=20):
+        t_array = np.linspace(0, 1, pasos)
+        for t in t_array:
+            x_raw = p_ini[0] + t * (p_fin[0] - p_ini[0])
+            y_raw = p_ini[1] + t * (p_fin[1] - p_ini[1])
+            x, y = aplicar_calibracion_xy(x_raw, y_raw)
+            
+            if not punto_es_seguro(x, y):
+                print(f"\nALERTA: Punto ({x:.1f}, {y:.1f}) bloqueado por límites de seguridad.")
+                regresar_a_casa(arduino)
+                return False # Falla de seguridad
+                
+            q1, q2 = calcular_ik(x, y)
+            q1, q2 = aplicar_calibracion_angulos(q1, q2)
+            puntos_totales.append(f"{q1:.2f},{q2:.2f},{1 if z_baja else 0}\n")
+        return True
+
+    print(f"\nCalculando cinemática para: {nombre_figura}...")
+    
+    # Secuencia lógica de dibujo
+    p_ini = vertices[0]
+    if not planificar_trayectoria(p_ini, p_ini, False, pasos=pasos_traslado): return
+    if not planificar_trayectoria(p_ini, p_ini, True, pasos=pasos_traslado): return
+    for i in range(len(vertices)-1):
+        if not planificar_trayectoria(vertices[i], vertices[i+1], True, pasos=pasos_dibujo): return
+    if not planificar_trayectoria(vertices[-1], vertices[-1], False, pasos=pasos_traslado): return
+
+    print(f"Enviando coordenadas al robot...")
+    total = len(puntos_totales)
+    arduino.reset_input_buffer()
+
+    for i, comando in enumerate(puntos_totales):
+        arduino.write(comando.encode('utf-8'))
+        tiempo_inicio = time.time()
+        
+        while True:
+            if arduino.in_waiting > 0:
+                respuesta = arduino.readline().decode('utf-8').strip()
+                if respuesta == "OK":
+                    break 
+            
+            if (time.time() - tiempo_inicio) > TIMEOUT_MOVIMIENTO:
+                print(f"\nERROR: El Arduino no respondió 'OK' en {TIMEOUT_MOVIMIENTO}s.")
+                regresar_a_casa(arduino)
+                return
+        
+        # Barra de progreso
+        if i % 5 == 0 or i == total - 1:
+            print(f"\rProgreso: {int((i / (total - 1)) * 100)}% completado", end="")
+
+    print("\n¡Figura finalizada con éxito!")
+    regresar_a_casa(arduino)
+
+# ==============================================================================
+# INICIO DEL PROGRAMA (MENÚ INTERACTIVO)
+# ==============================================================================
+if __name__ == "__main__":
+    TIMEOUT_MOVIMIENTO = float(PERFIL["movimiento"]["timeout_movimiento"])
+    try:
+        arduino_serial = serial.Serial(PUERTO_ARDUINO, BAUDRATE, timeout=1)
+        time.sleep(2) 
+        while arduino_serial.in_waiting > 0:
+            print("Sistema:", arduino_serial.readline().decode('utf-8').strip())
+        print("--- CONEXIÓN ESTABLECIDA ---")
+    except:
+        print(f"Error: No se pudo abrir {PUERTO_ARDUINO}. Verifica la conexión.")
+        sys.exit()
+
+    opciones_validas = {
+        '1': 'Triangulo',
+        '2': 'Cuadrado',
+        '3': 'Pentagono',
+        '4': 'Circulo'
+    }
+
+    try:
+        while True:
+            print("\n" + "="*30)
+            print("      MENÚ DE CONTROL SCARA")
+            print("="*30)
+            print("1. Dibujar Triángulo")
+            print("2. Dibujar Cuadrado")
+            print("3. Dibujar Pentágono")
+            print("4. Dibujar Círculo")
+            print("5. Retornar a Home")
+            print("6. Salir")
+            
+            seleccion = input("Selecciona una opción (1-6): ")
+
+            if seleccion in opciones_validas:
+                trazar_figura(opciones_validas[seleccion], arduino_serial)
+            elif seleccion == '5':
+                regresar_a_casa(arduino_serial)
+            elif seleccion == '6':
+                print("Cerrando comunicación serial. ¡Hasta luego!")
+                break
+            else:
+                print("Opción no válida. Intenta de nuevo.")
+
+    except KeyboardInterrupt:
+        print("\nEjecución interrumpida por el usuario.")
+    finally:
+        arduino_serial.close()

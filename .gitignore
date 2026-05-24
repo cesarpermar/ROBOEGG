@@ -1,0 +1,48 @@
+# ============================================================================
+# ROBOEGG — SCARA Robot Project .gitignore
+# ============================================================================
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- LaTeX (auxiliares del reporte) ---
+*.aux
+*.log
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.out
+*.toc
+*.bbl
+*.blg
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Arduino ---
+*.elf
+*.hex
+
+# --- Archivos temporales ---
+*.tmp
+*.bak
+REPORTE/

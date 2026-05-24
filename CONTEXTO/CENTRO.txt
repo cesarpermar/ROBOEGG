@@ -1,0 +1,4 @@
+Centro actual detectado en XY=(298.01, 53.49)
+Guardar este punto como centro de hoja? (s/n): s
+Centro de hoja guardado en offsets:
+offset_x=98.01, offset_y=53.49
