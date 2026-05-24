@@ -19,6 +19,9 @@ ROBOEGG es un brazo robótico **SCARA** (Selective Compliance Articulated Robot 
 
 > Proyecto desarrollado siguiendo la metodología **Spec-Driven Development (SDD)** inspirada en [GitHub Spec Kit](https://github.com/github/spec-kit).
 
+> ### 👉 [QUICKSTART.md — Guía Paso a Paso (empieza aquí)](QUICKSTART.md)
+> Firmware → Hardware → Calibración → Dibujar. Todo explicado de cero.
+
 ## 🏗️ Arquitectura del Sistema
 
 ```
@@ -135,6 +138,7 @@ ROBOEGG/
 
 | Documento | Descripción |
 |-----------|-------------|
+| **[🚀 QUICKSTART](QUICKSTART.md)** | **Guía paso a paso: de cero a dibujar** |
 | [Especificación del Sistema](specs/001-scara-control-system/spec.md) | Requisitos funcionales y user stories |
 | [Plan Técnico](specs/001-scara-control-system/plan.md) | Arquitectura, stack y modelo cinemático |
 | [Parámetros D-H](docs/dh_parameters.md) | Tabla formal y derivación cinemática |
