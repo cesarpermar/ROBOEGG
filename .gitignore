@@ -46,6 +46,7 @@ desktop.ini
 *.tmp
 *.bak
 REPORTE/
+CONTEXTO/
 
 # --- Seguridad y Credenciales (Prevención de fugas) ---
 .env
