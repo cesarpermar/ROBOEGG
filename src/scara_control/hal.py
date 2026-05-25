@@ -34,6 +34,7 @@ class HardwareInterface:
         self.last_q1: float = 0.0
         self.last_q2: float = 0.0
         self.detener_emergencia: bool = False
+        self.on_move_callback: Optional[callable] = None
 
     @staticmethod
     def listar_puertos() -> list[str]:
@@ -94,6 +95,12 @@ class HardwareInterface:
         # Store last position for safe E-STOP recovery
         self.last_q1 = q1
         self.last_q2 = q2
+
+        if self.on_move_callback:
+            try:
+                self.on_move_callback(x, y, q1, q2, z)
+            except Exception:
+                pass
 
         comando = f"{q1:.2f},{q2:.2f},{z}\n"
         self.serial_port.write(comando.encode("ascii"))

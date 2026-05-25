@@ -103,3 +103,87 @@ def generar_puntos_circulo(
         )
         for i in range(segmentos)
     ]
+
+
+import numpy as np
+
+def matriz_dh(theta_deg: float, d: float, a: float, alpha_deg: float) -> np.ndarray:
+    """Compute standard Denavit-Hartenberg transformation matrix (4x4)."""
+    th = math.radians(theta_deg)
+    al = math.radians(alpha_deg)
+    return np.array([
+        [math.cos(th), -math.sin(th) * math.cos(al), math.sin(th) * math.sin(al), a * math.cos(th)],
+        [math.sin(th),  math.cos(th) * math.cos(al), -math.cos(th) * math.sin(al), a * math.sin(th)],
+        [0,             math.sin(al),                math.cos(al),               d],
+        [0,             0,                           0,                          1]
+    ])
+
+
+def analizar_punto_dh(
+    x: float,
+    y: float,
+    l1: float = L1,
+    l2: float = L2,
+    gamma: float = GAMMA,
+    codo_derecho: bool = CODO_DERECHO,
+    escala_x: float = ESCALA_X,
+    escala_y: float = ESCALA_Y,
+    centro_x: float = CENTRO_X,
+    centro_y: float = CENTRO_Y,
+) -> Optional[dict]:
+    """Perform a complete Denavit-Hartenberg analytical study of a target point.
+
+    Computes inverse kinematics, converts to ideal angles theta1/theta2,
+    builds the local T01/T12 and total transformation matrices, and
+    performs forward kinematics verification (Xfk, Yfk).
+    """
+    # 1. Apply scale compensation
+    dx = x - centro_x
+    dy = y - centro_y
+    x_esc = (dx * escala_x) + centro_x
+    y_esc = (dy * escala_y) + centro_y
+
+    # 2. Inverse kinematics for theta1/theta2 (ideal coordinate frame)
+    d_cos = (x_esc**2 + y_esc**2 - l1**2 - l2**2) / (2 * l1 * l2)
+    if not (-1 <= d_cos <= 1):
+        return None
+
+    signo = -1 if codo_derecho else 1
+    theta2_rad = math.atan2(signo * math.sqrt(1 - d_cos**2), d_cos)
+    theta1_rad = math.atan2(y_esc, x_esc) - math.atan2(
+        l2 * math.sin(theta2_rad),
+        l1 + l2 * math.cos(theta2_rad)
+    )
+
+    theta1_deg = math.degrees(theta1_rad)
+    theta2_deg = math.degrees(theta2_rad)
+
+    # 3. Compute machine angles (what we actually send over serial)
+    q1_maquina = 90.0 - theta1_deg
+    q2_maquina = -q1_maquina + theta2_deg + gamma
+
+    # 4. Denavit-Hartenberg Matrices
+    T01 = matriz_dh(theta1_deg, 0.0, l1, 0.0)
+    T12 = matriz_dh(theta2_deg, 0.0, l2, 0.0)
+    T_total = np.dot(T01, T12)
+
+    # 5. Forward Kinematics verification (from T_total translation components)
+    x_fk = T_total[0, 3]
+    y_fk = T_total[1, 3]
+
+    return {
+        "x_obj": x,
+        "y_obj": y,
+        "x_esc": x_esc,
+        "y_esc": y_esc,
+        "theta1": theta1_deg,
+        "theta2": theta2_deg,
+        "q1": q1_maquina,
+        "q2": q2_maquina,
+        "x_fk": x_fk,
+        "y_fk": y_fk,
+        "T01": T01,
+        "T12": T12,
+        "T": T_total,
+    }
+

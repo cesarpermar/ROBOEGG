@@ -5,12 +5,12 @@ Modular control system for the ROBOEGG SCARA 2R robot.
 """
 
 from .config import L1, L2, GAMMA, CENTRO_X, CENTRO_Y
-from .kinematics import calcular_ik, generar_puntos_circulo
+from .kinematics import calcular_ik, generar_puntos_circulo, analizar_punto_dh
 from .hal import HardwareInterface
 from .trajectory import TrajectoryEngine
 
 __all__ = [
     "L1", "L2", "GAMMA", "CENTRO_X", "CENTRO_Y",
-    "calcular_ik", "generar_puntos_circulo",
+    "calcular_ik", "generar_puntos_circulo", "analizar_punto_dh",
     "HardwareInterface", "TrajectoryEngine",
 ]
