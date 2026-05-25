@@ -42,7 +42,21 @@ desktop.ini
 *.elf
 *.hex
 
-# --- Archivos temporales ---
+# --- Archivos temporales y respaldos ---
 *.tmp
 *.bak
 REPORTE/
+
+# --- Seguridad y Credenciales (Prevención de fugas) ---
+.env
+.env.local
+.env.*
+*.pem
+*.key
+*.pub
+*.p12
+*.pfx
+secrets.*
+credentials.*
+local_settings.py
+
