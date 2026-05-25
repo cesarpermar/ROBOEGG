@@ -383,8 +383,8 @@ class ScaraMasterPro(tk.Tk):
             self.canvas.create_line(ox, oy, ex_c, ey_c, fill="#00C4FF", width=2)
 
             # Draw Neon link 2 (Elbow to End Effector)
-            self.canvas.create_line(ex_c, ey_c, efx_c, ey_c, fill="#E30066", width=6)
-            self.canvas.create_line(ex_c, ey_c, efx_c, ey_c, fill="#FF6BAE", width=2)
+            self.canvas.create_line(ex_c, ey_c, efx_c, efy_c, fill="#E30066", width=6)
+            self.canvas.create_line(ex_c, ey_c, efx_c, efy_c, fill="#FF6BAE", width=2)
 
             # Draw Joint Caps
             self.canvas.create_oval(ox-6, oy-6, ox+6, oy+6, fill="#1E1E1E", outline="#00C4FF", width=2)
