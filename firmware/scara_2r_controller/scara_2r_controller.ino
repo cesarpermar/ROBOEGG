@@ -21,8 +21,8 @@ AccelStepper stepper1(AccelStepper::DRIVER, PIN_STEP_M1, PIN_DIR_M1);
 AccelStepper stepper2(AccelStepper::DRIVER, PIN_STEP_M2, PIN_DIR_M2);
 Servo penServo;
 
-const int ANGULO_ARRIBA = 90;
-const int ANGULO_ABAJO  = 135;
+const int ANGULO_ARRIBA = 5;
+const int ANGULO_ABAJO  = 175;
 
 // 200 pasos/rev * 16 microsteps * reduccion 3:1 = 9600 pasos/rev
 const float PASOS_POR_GRADO = 9600.0f / 360.0f;

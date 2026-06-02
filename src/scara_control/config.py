@@ -18,7 +18,7 @@ L2: float = 159.94
 """Effective length of link 2 (elbow to end-effector) in mm.
 Computed as sqrt(150² + 55.5²) to account for the end-effector offset."""
 
-GAMMA: float = -11.0
+GAMMA: float = -5
 """Angular offset correction (degrees) for the elbow joint.
 Compensates geometric misalignment between the motor axis and the link."""
 
@@ -32,11 +32,16 @@ CODO_DERECHO: bool = True
 RESOLUCION_MM: float = 1.0
 """Interpolation resolution in mm. Smaller = smoother but slower."""
 
-ESCALA_X: float = (60.0 / 70.0) * (60.0 / 51.0)
+ESCALA_X: float = 60.0 / 70.0
 """X-axis scale correction factor. Ratio of desired/actual dimension."""
 
-ESCALA_Y: float = (60.0 / 50.0) * (60.0 / 68.0)
+ESCALA_Y: float = 60.0 / 50.0
 """Y-axis scale correction factor. Ratio of desired/actual dimension."""
+
+K_TRAPEZOID: float = 0.0008
+"""Trapezoidal correction coefficient to compensate for X scale variation with Y.
+A positive value expands X coordinates at higher Y values.
+Formula: scale_x_dynamic = escala_x * (1.0 + K_TRAPEZOID * (y - 170.0))"""
 
 CENTRO_X: float = 0.0
 """Workspace center X coordinate in mm."""

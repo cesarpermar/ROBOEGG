@@ -11,6 +11,7 @@ from typing import Optional, Tuple
 from .config import (
     L1, L2, GAMMA, CODO_DERECHO,
     ESCALA_X, ESCALA_Y, CENTRO_X, CENTRO_Y,
+    K_TRAPEZOID,
 )
 
 
@@ -25,12 +26,13 @@ def calcular_ik(
     escala_y: float = ESCALA_Y,
     centro_x: float = CENTRO_X,
     centro_y: float = CENTRO_Y,
+    k_trapezoid: float = K_TRAPEZOID,
 ) -> Tuple[Optional[float], Optional[float]]:
     """Compute inverse kinematics for a 2R planar SCARA arm.
 
     Transforms Cartesian coordinates (x, y) into machine joint angles
     (q1_machine, q2_machine) using the Denavit-Hartenberg model with
-    scale compensation and gamma correction.
+    scale compensation, gamma correction, and dynamic trapezoidal skew adjustment.
 
     Args:
         x: Target X coordinate in mm (workspace frame).
@@ -43,15 +45,17 @@ def calcular_ik(
         escala_y: Y-axis scale correction factor.
         centro_x: Workspace center X coordinate.
         centro_y: Workspace center Y coordinate.
+        k_trapezoid: Trapezoidal correction coefficient.
 
     Returns:
         Tuple of (q1_machine, q2_machine) in degrees, or (None, None)
         if the target point is unreachable.
     """
-    # Step 1: Apply scale compensation
+    # Step 1: Apply scale and trapezoidal compensation
     dx = x - centro_x
     dy = y - centro_y
-    x_esc = (dx * escala_x) + centro_x
+    scale_x_dynamic = escala_x * (1.0 + k_trapezoid * (y - 170.0))
+    x_esc = (dx * scale_x_dynamic) + centro_x
     y_esc = (dy * escala_y) + centro_y
 
     # Step 2: Compute cosine of q2 via the law of cosines
@@ -130,6 +134,7 @@ def analizar_punto_dh(
     escala_y: float = ESCALA_Y,
     centro_x: float = CENTRO_X,
     centro_y: float = CENTRO_Y,
+    k_trapezoid: float = K_TRAPEZOID,
 ) -> Optional[dict]:
     """Perform a complete Denavit-Hartenberg analytical study of a target point.
 
@@ -137,10 +142,11 @@ def analizar_punto_dh(
     builds the local T01/T12 and total transformation matrices, and
     performs forward kinematics verification (Xfk, Yfk).
     """
-    # 1. Apply scale compensation
+    # 1. Apply scale and trapezoidal compensation
     dx = x - centro_x
     dy = y - centro_y
-    x_esc = (dx * escala_x) + centro_x
+    scale_x_dynamic = escala_x * (1.0 + k_trapezoid * (y - 170.0))
+    x_esc = (dx * scale_x_dynamic) + centro_x
     y_esc = (dy * escala_y) + centro_y
 
     # 2. Inverse kinematics for theta1/theta2 (ideal coordinate frame)
