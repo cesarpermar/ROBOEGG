@@ -32,10 +32,10 @@ CODO_DERECHO: bool = True
 RESOLUCION_MM: float = 1.0
 """Interpolation resolution in mm. Smaller = smoother but slower."""
 
-ESCALA_X: float = 60.0 / 70.0
+ESCALA_X: float = (60.0 / 70.0) * (60.0 / 51.0)
 """X-axis scale correction factor. Ratio of desired/actual dimension."""
 
-ESCALA_Y: float = 60.0 / 50.0
+ESCALA_Y: float = (60.0 / 50.0) * (60.0 / 68.0)
 """Y-axis scale correction factor. Ratio of desired/actual dimension."""
 
 CENTRO_X: float = 0.0
