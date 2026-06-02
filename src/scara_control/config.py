@@ -18,7 +18,7 @@ L2: float = 159.94
 """Effective length of link 2 (elbow to end-effector) in mm.
 Computed as sqrt(150² + 55.5²) to account for the end-effector offset."""
 
-GAMMA: float = 2.0
+GAMMA: float = -11.0
 """Angular offset correction (degrees) for the elbow joint.
 Compensates geometric misalignment between the motor axis and the link."""
 
